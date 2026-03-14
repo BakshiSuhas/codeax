@@ -13,8 +13,8 @@ export function DashboardNav() {
   return (
     <aside className="w-full border-b border-gh-border bg-gh-card px-4 py-4 md:h-screen md:w-64 md:border-b-0 md:border-r md:px-5 md:py-6">
       <Link href="/" className="mb-6 inline-flex items-center gap-2 font-semibold text-gh-heading">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-gh-green text-sm text-white">RG</span>
-        RepoGuardian
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-gh-green text-sm text-white">CX</span>
+        Codeax
       </Link>
       <nav className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-1">
         {navItems.map((item) => (

@@ -1,7 +1,7 @@
-# RepoGuardian AI Architecture
+# Codeax Architecture
 
 ## Overview
-RepoGuardian AI is split into two services:
+Codeax is split into two services:
 - Frontend: Next.js App Router dashboard and landing page
 - Backend: FastAPI API for repository, pull request, analysis, and webhook routes
 

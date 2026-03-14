@@ -63,7 +63,7 @@ async def receive_github_webhook(
 def _format_pr_comment(result) -> str:
     high_severity = len([item for item in result.findings if item.severity in ["critical", "high"]])
     return (
-        "RepoGuardian AI Report\n\n"
+        "Codeax Analysis Report\n\n"
         f"PR Type: {result.pr_type}\n"
         f"Overall Health: {result.health.overall}%\n"
         f"Security Issues: {high_severity}\n"

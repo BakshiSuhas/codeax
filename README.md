@@ -1,6 +1,6 @@
-# RepoGuardian AI
+# Codeax
 
-RepoGuardian AI is a full-stack baseline for autonomous PR analysis workflows:
+Codeax is a full-stack baseline for autonomous PR analysis workflows:
 - Frontend: Next.js 14 + TypeScript + Tailwind dashboard and landing page
 - Backend: FastAPI with structured routers, models, and service layer
 - Infra: Docker Compose and VS Code task support

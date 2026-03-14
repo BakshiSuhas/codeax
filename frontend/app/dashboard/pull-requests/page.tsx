@@ -14,7 +14,7 @@ type PullRequestSummary = {
 };
 
 const DEFAULT_OWNER = "octo-org";
-const DEFAULT_REPO = "repoguardian-ai";
+const DEFAULT_REPO = "codeax";
 
 export default function PullRequestsPage() {
   const [items, setItems] = useState<PullRequestSummary[]>([]);

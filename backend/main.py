@@ -12,7 +12,7 @@ async def lifespan(app: FastAPI):
     yield
     await close_mongo_connection()
 
-app = FastAPI(title="RepoGuardian AI", lifespan=lifespan)
+app = FastAPI(title="Codeax", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "RepoGuardian AI",
-  description: "Autonomous GitHub AI assistant"
+  title: "Codeax",
+  description: "Autonomous GitHub code analysis platform"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

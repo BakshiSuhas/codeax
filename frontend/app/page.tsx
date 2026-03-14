@@ -4,9 +4,9 @@ export default function HomePage() {
   return (
     <main className="min-h-screen px-6 py-10 md:px-16 md:py-16">
       <section className="mx-auto max-w-5xl rounded-2xl border border-gh-border bg-gh-card/90 p-8 shadow-2xl md:p-12">
-        <p className="text-gh-green text-sm font-semibold tracking-wide">RepoGuardian AI</p>
+        <p className="text-gh-green text-sm font-semibold tracking-wide">Codeax</p>
         <h1 className="mt-3 max-w-3xl text-4xl font-bold text-gh-heading md:text-6xl">
-          Autonomous GitHub review, security scanning, and test guidance.
+          Autonomous GitHub review, security scanning, and test guidance for your codebase.
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-gh-text">
           Analyze pull requests, identify risks, and surface actionable improvements from a single dashboard.
