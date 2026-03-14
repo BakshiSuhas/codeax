@@ -29,10 +29,39 @@ export type AnalysisResult = {
   generated_at: string;
 };
 
+export type ChatRequest = {
+  message: string;
+  owner?: string;
+  repo?: string;
+};
+
+export type ChatResponse = {
+  answer: string;
+  suggestions: string[];
+  context: Record<string, string | number | null>;
+};
+
 export async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);
   }
   return (await response.json()) as T;
+}
+
+export async function postJson<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return (await response.json()) as TResponse;
 }

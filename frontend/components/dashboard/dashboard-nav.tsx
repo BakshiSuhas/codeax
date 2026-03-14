@@ -6,6 +6,7 @@ const navItems = [
   { href: "/dashboard/pull-requests", label: "Pull Requests" },
   { href: "/dashboard/security", label: "Security" },
   { href: "/dashboard/tests", label: "Tests" },
+  { href: "/dashboard/chatbot", label: "Chatbot" },
   { href: "/dashboard/settings", label: "Settings" }
 ];
 

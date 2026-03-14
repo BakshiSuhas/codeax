@@ -51,6 +51,7 @@ Codeax is a full-stack baseline for autonomous PR analysis workflows:
 - `POST /api/analysis/{owner}/{repo}/{pr_number}`
 - `GET /api/analysis/{owner}/{repo}/{pr_number}`
 - `GET /api/analysis/{owner}/{repo}`
+- `POST /api/chat/`
 - `POST /api/webhooks/github`
 
 ## Implemented Frontend Routes
@@ -60,6 +61,7 @@ Codeax is a full-stack baseline for autonomous PR analysis workflows:
 - `/dashboard/pull-requests`
 - `/dashboard/security`
 - `/dashboard/tests`
+- `/dashboard/chatbot`
 - `/dashboard/settings`
 
 See `ARCHITECTURE.md` and `SETUP_GUIDE.md` for details.
