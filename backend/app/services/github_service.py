@@ -15,7 +15,34 @@ from app.models import PullRequestModel, RepositoryHealth, RepositoryModel
 
 
 class GitHubService:
-    """Stub service that returns deterministic demo data."""
+    """GitHub API service with token or GitHub App authentication."""
+
+    def _get_static_token(self) -> str:
+        token = (settings.github_token or "").strip()
+        if not token:
+            return ""
+        placeholder_prefixes = ("replace_with_", "your_", "example")
+        if token.lower().startswith(placeholder_prefixes):
+            return ""
+        return token
+
+    def _build_headers(self, token: str = "") -> dict[str, str]:
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        return headers
+
+    async def _request_json(self, method: str, url: str, headers: dict[str, str], payload: dict[str, Any] | None = None) -> Any:
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.request(method, url, headers=headers, json=payload)
+            response.raise_for_status()
+            return response.json()
+
+    async def _get_repository_token(self, owner: str, repo: str) -> str:
+        return await self._get_installation_token(owner, repo)
 
     async def _get_app_jwt(self) -> str:
         if not settings.github_private_key_path or not settings.github_app_id:
@@ -30,8 +57,9 @@ class GitHubService:
         return jwt.encode(payload, private_key, algorithm="RS256")
 
     async def _get_installation_token(self, owner: str, repo: str) -> str:
-        if settings.github_token: # Fallback to static token if provided
-            return settings.github_token
+        static_token = self._get_static_token()
+        if static_token:  # Fallback to static token if provided
+            return static_token
             
         app_jwt = await self._get_app_jwt()
         if not app_jwt:
@@ -62,6 +90,31 @@ class GitHubService:
             token_resp.raise_for_status()
             return token_resp.json().get("token", "")
 
+    async def _get_pull_request_files(self, owner: str, repo: str, pr_number: int, token: str = "") -> list[dict[str, str]]:
+        headers = self._build_headers(token)
+        page = 1
+        files: list[dict[str, str]] = []
+
+        while True:
+            url = f"{settings.github_api_base_url}/repos/{owner}/{repo}/pulls/{pr_number}/files?per_page=100&page={page}"
+            payload = await self._request_json("GET", url, headers)
+            if not isinstance(payload, list) or not payload:
+                break
+
+            for item in payload:
+                files.append(
+                    {
+                        "filename": item.get("filename", ""),
+                        "patch": item.get("patch", ""),
+                    }
+                )
+
+            if len(payload) < 100:
+                break
+            page += 1
+
+        return files
+
     def is_valid_webhook_signature(self, payload_body: bytes, signature_header: str | None) -> bool:
         if not settings.github_webhook_secret:
             return True
@@ -77,14 +130,22 @@ class GitHubService:
         if not pr or not repo:
             return None
 
+        owner = repo.get("owner", {}).get("login", "")
+        repo_name = repo.get("name", "")
+        pr_number = pr.get("number", 0)
+        token = ""
+        if owner and repo_name and pr_number:
+            try:
+                token = await self._get_repository_token(owner, repo_name)
+            except Exception:
+                token = ""
+
         changed_files: list[dict[str, str]] = []
-        for file in pr.get("_files", []):
-            changed_files.append(
-                {
-                    "filename": file.get("filename", ""),
-                    "patch": file.get("patch", ""),
-                }
-            )
+        if owner and repo_name and pr_number:
+            try:
+                changed_files = await self._get_pull_request_files(owner, repo_name, pr_number, token)
+            except Exception:
+                changed_files = []
 
         repository_name = repo.get("full_name", f"{repo.get('owner', {}).get('login', 'unknown')}/{repo.get('name', 'repo')}")
         snapshot = {
@@ -102,7 +163,7 @@ class GitHubService:
 
         return PullRequestContext(
             repository=repository_name,
-            number=pr.get("number", 0),
+            number=pr_number,
             title=pr.get("title", ""),
             body=pr.get("body", ""),
             author=pr.get("user", {}).get("login", "unknown"),
@@ -134,50 +195,122 @@ class GitHubService:
             return response.status_code in [200, 201]
 
     async def list_repositories(self) -> list[RepositoryModel]:
-        return [
-            RepositoryModel(
-                owner="octo-org",
-                name="repoguardian-ai",
-                full_name="octo-org/repoguardian-ai",
-                description="AI review and security assistant",
-                stars=314,
-                language="TypeScript",
-                health=RepositoryHealth(code_quality=84, security=88, tests=76, overall=83),
-            ),
-            RepositoryModel(
-                owner="octo-org",
-                name="platform-api",
-                full_name="octo-org/platform-api",
-                description="Core backend services",
-                stars=198,
-                language="Python",
-                health=RepositoryHealth(code_quality=81, security=79, tests=73, overall=78),
-            ),
-        ]
+        token = self._get_static_token()
+        if not token:
+            return [
+                RepositoryModel(
+                    owner="octo-org",
+                    name="repoguardian-ai",
+                    full_name="octo-org/repoguardian-ai",
+                    description="AI review and security assistant",
+                    stars=314,
+                    language="TypeScript",
+                    health=RepositoryHealth(code_quality=84, security=88, tests=76, overall=83),
+                ),
+            ]
+
+        headers = self._build_headers(token)
+        repos: list[RepositoryModel] = []
+        page = 1
+
+        try:
+            while True:
+                url = f"{settings.github_api_base_url}/user/repos?per_page=100&page={page}&sort=updated"
+                payload = await self._request_json("GET", url, headers)
+                if not isinstance(payload, list) or not payload:
+                    break
+
+                for item in payload:
+                    full_name = item.get("full_name", "")
+                    owner = item.get("owner", {}).get("login", "")
+                    name = item.get("name", "")
+                    if not owner or not name:
+                        continue
+
+                    health_score = 65
+                    open_issues = int(item.get("open_issues_count") or 0)
+                    if open_issues < 5:
+                        health_score = 85
+                    elif open_issues < 20:
+                        health_score = 75
+
+                    repos.append(
+                        RepositoryModel(
+                            owner=owner,
+                            name=name,
+                            full_name=full_name or f"{owner}/{name}",
+                            description=item.get("description"),
+                            stars=int(item.get("stargazers_count") or 0),
+                            language=item.get("language") or "Unknown",
+                            health=RepositoryHealth(
+                                code_quality=health_score,
+                                security=min(95, health_score + 5),
+                                tests=max(50, health_score - 5),
+                                overall=health_score,
+                            ),
+                        )
+                    )
+
+                if len(payload) < 100:
+                    break
+                page += 1
+        except Exception:
+            return [
+                RepositoryModel(
+                    owner="octo-org",
+                    name="repoguardian-ai",
+                    full_name="octo-org/repoguardian-ai",
+                    description="AI review and security assistant",
+                    stars=314,
+                    language="TypeScript",
+                    health=RepositoryHealth(code_quality=84, security=88, tests=76, overall=83),
+                ),
+            ]
+
+        return repos
 
     async def list_pull_requests(self, owner: str, repo: str) -> list[PullRequestModel]:
+        token = await self._get_repository_token(owner, repo)
+        headers = self._build_headers(token)
         repository_name = f"{owner}/{repo}"
-        return [
-            PullRequestModel(
-                number=128,
-                repository=repository_name,
-                title="Harden webhook signature validation",
-                author="nikhilk",
-                status="open",
-                additions=210,
-                deletions=67,
-                files_changed=9,
-                updated_at=datetime.utcnow(),
-            ),
-            PullRequestModel(
-                number=124,
-                repository=repository_name,
-                title="Improve dashboard loading skeleton",
-                author="octocat",
-                status="merged",
-                additions=132,
-                deletions=41,
-                files_changed=6,
-                updated_at=datetime.utcnow(),
-            ),
-        ]
+
+        url = f"{settings.github_api_base_url}/repos/{owner}/{repo}/pulls?state=all&per_page=30&sort=updated&direction=desc"
+        try:
+            payload = await self._request_json("GET", url, headers)
+        except Exception:
+            return [
+                PullRequestModel(
+                    number=128,
+                    repository=repository_name,
+                    title="Harden webhook signature validation",
+                    author="nikhilk",
+                    status="open",
+                    additions=210,
+                    deletions=67,
+                    files_changed=9,
+                    updated_at=datetime.utcnow(),
+                ),
+            ]
+
+        pull_requests: list[PullRequestModel] = []
+        for item in payload:
+            raw_state = item.get("state", "open")
+            status = "merged" if item.get("merged_at") else raw_state
+            if item.get("draft"):
+                status = "draft"
+
+            pull_requests.append(
+                PullRequestModel(
+                    number=int(item.get("number") or 0),
+                    repository=repository_name,
+                    title=item.get("title", "Untitled pull request"),
+                    author=item.get("user", {}).get("login", "unknown"),
+                    status=status,
+                    additions=int(item.get("additions") or 0),
+                    deletions=int(item.get("deletions") or 0),
+                    files_changed=int(item.get("changed_files") or 0),
+                    updated_at=datetime.fromisoformat(item.get("updated_at", datetime.utcnow().isoformat()).replace("Z", "+00:00")),
+                )
+            )
+
+        return pull_requests

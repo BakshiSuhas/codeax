@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.database.mongodb import connect_to_mongo, close_mongo_connection
+from app.database.client import connect_to_mongo, close_mongo_connection
 from app.routers import analysis, health, pull_requests, repositories, webhooks
 
 @asynccontextmanager

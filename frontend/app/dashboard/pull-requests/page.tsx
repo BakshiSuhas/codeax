@@ -13,8 +13,10 @@ type PullRequestSummary = {
   status: string;
 };
 
-const DEFAULT_OWNER = "octo-org";
-const DEFAULT_REPO = "repoguardian-ai";
+const DEFAULT_OWNER = "nikhilkumarpanigrahi";
+const DEFAULT_REPO = "codeax";
+const OWNER = process.env.NEXT_PUBLIC_DEFAULT_GITHUB_OWNER || DEFAULT_OWNER;
+const REPO = process.env.NEXT_PUBLIC_DEFAULT_GITHUB_REPO || DEFAULT_REPO;
 
 export default function PullRequestsPage() {
   const [items, setItems] = useState<PullRequestSummary[]>([]);
@@ -23,7 +25,7 @@ export default function PullRequestsPage() {
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    fetchJson<PullRequestSummary[]>(`/api/pull-requests/${DEFAULT_OWNER}/${DEFAULT_REPO}`)
+    fetchJson<PullRequestSummary[]>(`/api/pull-requests/${OWNER}/${REPO}`)
       .then((data) => {
         setItems(data);
         if (data.length > 0) {
@@ -38,7 +40,7 @@ export default function PullRequestsPage() {
   useEffect(() => {
     if (!selected) return;
     setError("");
-    fetchJson<AnalysisResult>(`/api/analysis/${DEFAULT_OWNER}/${DEFAULT_REPO}/${selected}`)
+    fetchJson<AnalysisResult>(`/api/analysis/${OWNER}/${REPO}/${selected}`)
       .then((data) => setAnalysis(data))
       .catch(() => {
         setAnalysis(null);
@@ -69,6 +71,7 @@ export default function PullRequestsPage() {
 
       <div className="space-y-4 lg:col-span-2">
         <SectionCard title="PR Analysis View">
+          <p className="text-xs text-gh-muted">Repository: {OWNER}/{REPO}</p>
           <p className="text-sm">Selected PR: {selected ? `#${selected} ${selectedTitle}` : "None"}</p>
           {error ? <p className="mt-2 text-sm text-amber-300">{error}</p> : null}
           {analysis ? (
